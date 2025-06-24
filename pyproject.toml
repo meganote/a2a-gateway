@@ -1,0 +1,11 @@
+[project]
+name = "a2a-gateway"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "a2a-sdk>=0.2.8",
+    "pydantic>=2.11.7",
+    "uvicorn>=0.34.3",
+]
