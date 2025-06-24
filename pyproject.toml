@@ -8,5 +8,6 @@ dependencies = [
     "a2a-sdk>=0.2.8",
     "dotenv>=0.9.9",
     "pydantic>=2.11.7",
+    "starlette-context>=0.4.0",
     "uvicorn>=0.34.3",
 ]

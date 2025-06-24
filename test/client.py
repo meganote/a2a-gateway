@@ -23,8 +23,9 @@ async def main() -> None:
     # --8<-- [start:A2ACardResolver]
 
     base_url = "http://localhost:9999/123"
+    header = {"X-API-Key": "my_api_key"}
 
-    async with httpx.AsyncClient() as httpx_client:
+    async with httpx.AsyncClient(headers=header) as httpx_client:
         # Initialize A2ACardResolver
         resolver = A2ACardResolver(
             httpx_client=httpx_client,
