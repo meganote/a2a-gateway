@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "a2a-sdk>=0.2.8",
+    "dotenv>=0.9.9",
     "pydantic>=2.11.7",
     "uvicorn>=0.34.3",
 ]

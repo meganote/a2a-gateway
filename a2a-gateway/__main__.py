@@ -1,19 +1,27 @@
+import json
 import logging
+import os
 
 import uvicorn
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import AgentCapabilities, AgentCard, AgentSkill
-from agent import AgentGatewayExecutor  # type: ignore[import-untyped]
+from a2a.types import AgentCapabilities, AgentCard, AgentSkill, APIKeySecurityScheme
+from agent import AppIdAgentExecutor  # type: ignore[import-untyped]
+from dotenv import load_dotenv
 from starlette.applications import Starlette
-from starlette.routing import Mount, Route
+from starlette.routing import Mount
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 
-if __name__ == "__main__":
-    # --8<-- [start:AgentSkill]
+def create_app(app_id: str) -> A2AStarletteApplication:
+    print(f"--- {app_id} ---")
+    base_url = f"http://localhost:9999/{app_id}/"
+    # api_key_scheme = APIKeySecurityScheme(in_="header", name="authentication")
+
+    # get app info
     skill = AgentSkill(
         id="hello_world",
         name="Returns hello world",
@@ -21,61 +29,46 @@ if __name__ == "__main__":
         tags=["hello world"],
         examples=["hi", "hello world"],
     )
-    # --8<-- [end:AgentSkill]
 
-    extended_skill = AgentSkill(
-        id="super_hello_world",
-        name="Returns a SUPER Hello World",
-        description="A more enthusiastic greeting, only for authenticated users.",
-        tags=["hello world", "super", "extended"],
-        examples=["super hi", "give me a super hello"],
-    )
-
-    # --8<-- [start:AgentCard]
-    # This will be the public-facing agent card
     public_agent_card = AgentCard(
-        name="Hello World Agent",
+        name=app_id,
         description="Just a hello world agent",
-        url="http://localhost:9999/123/",
+        url=base_url,
         version="1.0.0",
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
         capabilities=AgentCapabilities(streaming=True),
         skills=[skill],  # Only the basic skill for the public card
-        supportsAuthenticatedExtendedCard=True,
-    )
-    # --8<-- [end:AgentCard]
-
-    # This will be the authenticated extended agent card
-    # It includes the additional 'extended_skill'
-    specific_extended_agent_card = public_agent_card.model_copy(
-        update={
-            "name": "Hello World Agent - Extended Edition",  # Different name for clarity
-            "description": "The full-featured hello world agent for authenticated users.",
-            "version": "1.0.1",  # Could even be a different version
-            # Capabilities and other fields like url, defaultInputModes, defaultOutputModes,
-            # supportsAuthenticatedExtendedCard are inherited from public_agent_card unless specified here.
-            "skills": [
-                skill,
-                extended_skill,
-            ],  # Both skills for the extended card
-        }
+        supportsAuthenticatedExtendedCard=False,
+        # securitySchemes={"api_key": api_key_scheme},
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=AgentGatewayExecutor(),
+        agent_executor=AppIdAgentExecutor(app_id=app_id),
         task_store=InMemoryTaskStore(),
     )
-
-    server = Starlette()
 
     app = A2AStarletteApplication(
         agent_card=public_agent_card,
         http_handler=request_handler,
-        extended_agent_card=specific_extended_agent_card,
     )
 
-    server.routes.append(Mount("/123", routes=app.routes()))
+    app.build(
+        agent_card_url=f"/{app_id}/.well-known/agent.json",
+        rpc_url=f"/{app_id}",
+        extended_agent_card_url=f"/{app_id}/agent/authenticatedExtendedCard",
+    )
+    return app
+
+
+if __name__ == "__main__":
+    server = Starlette()
+
+    app_ids = json.loads(os.getenv("APP_IDS", "[]"))
+    for app_id in app_ids:
+        app = create_app(app_id=app_id)
+        print(f"--- Mount: {app_id} ---")
+        server.routes.append(Mount(f"/{app_id}", routes=app.routes()))
 
     logging.basicConfig(level=logging.DEBUG)
     uvicorn.run(server, host="0.0.0.0", port=9999, log_level="debug")

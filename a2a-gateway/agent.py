@@ -7,25 +7,24 @@ from a2a.utils import new_agent_text_message
 logger = logging.getLogger(__name__)
 
 
-class AgentGateway:
-    """Hello World Agent."""
+class AppIdAgent:
+    def __init__(self, app_id: str):
+        self._app_id = app_id
 
     async def invoke(self) -> str:
-        logger.debug(f"invoke...")
-        return "Hello World"
+        return f"--- {self._app_id} --- Hello World"
 
 
-class AgentGatewayExecutor(AgentExecutor):
+class AppIdAgentExecutor(AgentExecutor):
 
-    def __init__(self):
-        self.agent = AgentGateway()
+    def __init__(self, app_id: str):
+        self.agent = AppIdAgent(app_id)
 
     async def execute(
         self,
         context: RequestContext,
         event_queue: EventQueue,
     ) -> None:
-        print(f"AgentGateway...")
         result = await self.agent.invoke()
         await event_queue.enqueue_event(new_agent_text_message(result))
 
